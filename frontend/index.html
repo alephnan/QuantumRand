@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantumRand - Quantum Random Number Generator</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+</head>
+<body>
+    <header class="bg-dark text-white py-4">
+        <div class="container">
+            <h1 class="text-center">QuantumRand</h1>
+            <p class="text-center lead">Quantum vs. Classical Random Number Generation</p>
+        </div>
+    </header>
+
+    <main class="container my-4">
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="h4 mb-0">Overview</h2>
+                    </div>
+                    <div class="card-body">
+                        <p>This application compares random number generation using quantum computing principles (via Qiskit) with classical pseudo-random number generation (via Python's <code>random</code> module).</p>
+                        
+                        <h4>Quantum Randomness: Fundamentally Non-Deterministic</h4>
+                        <p>Quantum random number generation leverages the inherent uncertainty in quantum mechanics formalized in the Born rule. When a quantum system in superposition is measured, the probability of measuring a specific state \(|i\rangle\) is given by:</p>
+                        <p>\[P(|i\rangle) = |\langle i | \psi \rangle|^2\]</p>
+                        <p>In our implementation, we place qubits in a uniform superposition state using Hadamard gates. For a single qubit:</p>
+                        <p>\[H|0\rangle = \frac{1}{\sqrt{2}}(|0\rangle + |1\rangle)\]</p>
+                        <p>According to the postulates of quantum mechanics, measurement will yield either 0 or 1 with exactly 50% probability. For \(n\) qubits, we have \(2^n\) possible outcomes, each with equal probability \(2^{-n}\). The measurement process constitutes a non-deterministic collapse, making quantum random numbers theoretically true sources of randomness (subject to hardware limitations).</p>
+                        
+                        <h4>Classical Randomness: Deterministic Algorithms</h4>
+                        <p>In contrast, classical pseudo-random number generators (PRNGs) like the Mersenne Twister algorithm used in Python's <code>random</code> module are deterministic sequences with mathematical properties that simulate randomness. Given a fixed seed value, they will always produce the same sequence of numbers, calculable by the recursion relation:</p>
+                        <p>\[x_{k+n} = f(x_{k+1}, x_{k+2}, ..., x_{k+n-1})\]</p>
+                        <p>While these algorithms are suitable for many applications, they are fundamentally deterministic and therefore not truly random by the definitions of probability theory.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="h4 mb-0">Generation Parameters</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="parameters-form">
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label for="generation-type" class="form-label">Generation Type:</label>
+                                    <select id="generation-type" class="form-select">
+                                        <option value="bits">Bits</option>
+                                        <option value="integers">Integers</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4" id="bits-options">
+                                    <label for="num-bits" class="form-label">Number of Bits/Qubits:</label>
+                                    <input type="number" id="num-bits" class="form-control" value="3" min="1" max="10">
+                                </div>
+                                <div class="col-md-4" id="integer-min" style="display: none;">
+                                    <label for="min-val" class="form-label">Minimum Value:</label>
+                                    <input type="number" id="min-val" class="form-control" value="1" min="0" max="999">
+                                </div>
+                                <div class="col-md-4" id="integer-max" style="display: none;">
+                                    <label for="max-val" class="form-label">Maximum Value:</label>
+                                    <input type="number" id="max-val" class="form-control" value="100" min="1" max="1000">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="num-samples" class="form-label">Number of Samples:</label>
+                                    <input type="number" id="num-samples" class="form-control" value="1000" min="10" max="10000">
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <button type="button" id="generate-btn" class="btn btn-primary">Generate & Compare</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="text-center my-4" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Generating random numbers and performing comparison...</p>
+        </div>
+
+        <div id="results" style="display: none;">
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h2 class="h4 mb-0">Distribution Comparison</h2>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="comparison-chart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header bg-info text-white">
+                            <h3 class="h5 mb-0">Quantum Random Results</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="quantum-results">
+                                <p><strong>Samples:</strong> <span id="quantum-samples"></span></p>
+                                <div id="quantum-stats"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header bg-info text-white">
+                            <h3 class="h5 mb-0">Classical Random Results</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="classical-results">
+                                <p><strong>Samples:</strong> <span id="classical-samples"></span></p>
+                                <div id="classical-stats"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-warning text-dark">
+                            <h3 class="h5 mb-0">Statistical Comparison</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="comparison-stats"></div>
+                            <div id="comparison-explanation" class="mt-3">
+                                <h4>Statistical Testing Framework</h4>
+                                <p>We employ distinct statistical tests depending on the data type:</p>
+                                
+                                <div id="chi-square-explanation">
+                                    <h5>Chi-Square Test for Categorical Data (Bit Patterns)</h5>
+                                    <p>For bit patterns, we use Pearson's Chi-Square test to evaluate whether the observed frequencies \(O_i\) from the quantum generator differ significantly from the expected frequencies \(E_i\) derived from the classical generator.</p>
+                                    <p>The chi-square statistic is calculated as:</p>
+                                    <p>\[\chi^2 = \sum_{i=1}^{n} \frac{(O_i - E_i)^2}{E_i}\]</p>
+                                    <p>This statistic approximately follows a chi-square distribution with \(k-1\) degrees of freedom (where \(k\) is the number of categories) under the null hypothesis that the distributions are identical.</p>
+                                    <p>The p-value represents the probability of observing a test statistic at least as extreme as the one calculated, assuming the null hypothesis is true. Mathematically, it is defined as:</p>
+                                    <p>\[p = P(\chi^2_{k-1} \geq \chi^2_{observed})\]</p>
+                                    <p>By "convention", a p-value \(< 0.05\) is considered statistically significant evidence to reject the null hypothesis and conclude that the distributions differ.</p>
+                                </div>
+                                
+                                <div id="ks-explanation">
+                                    <h5>Kolmogorov-Smirnov Test for Continuous Data (Integers)</h5>
+                                    <p>For integer distributions, we employ the two-sample Kolmogorov-Smirnov test, which compares the empirical cumulative distribution functions \(F_1(x)\) and \(F_2(x)\) of the two samples.</p>
+                                    <p>The KS statistic is defined as the maximum absolute difference between these distributions:</p>
+                                    <p>\[D_{n,m} = \sup_x |F_{1,n}(x) - F_{2,m}(x)|\]</p>
+                                    <p>Where \(n\) and \(m\) are the respective sample sizes. For large samples, the null distribution of this statistic can be approximated and used to calculate a p-value.</p>
+                                    <p>This non-parametric test is particularly appropriate for comparing probability distributions without making assumptions about their underlying forms.</p>
+                                </div>
+                                
+                                <div id="interpretation">
+                                    <h5>Interpretation</h5>
+                                    <p>A low p-value suggests significant differences between quantum and classical randomness, potentially indicating either:</p>
+                                    <ol>
+                                        <li>Quantum generators exhibit true randomness not achievable by classical algorithms</li>
+                                        <li>Biases in quantum hardware implementation affecting the output distribution</li>
+                                    </ol>
+                                    <p>Conversely, high p-values suggest that for practical purposes, there is no detectable difference between quantum and classical randomness in our implementation, despite their fundamentally different origins.</p>
+                                </div>
+                            </div>
+                            <p class="mt-3" id="comparison-conclusion"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-dark text-white py-3">
+        <div class="container text-center">
+            <p>QuantumRand - Quantum Random Number Generator</p>
+            <p><small>Created using Qiskit and Python</small></p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Initialize MathJax after page content is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof MathJax !== 'undefined') {
+                MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+            }
+        });
+        
+        // Re-render MathJax when results are displayed
+        document.getElementById('generate-btn').addEventListener('click', function() {
+            setTimeout(function() {
+                if (typeof MathJax !== 'undefined') {
+                    MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+                }
+            }, 1000); // Delay to ensure content is loaded
+        });
+    </script>
+</body>
+</html> 
